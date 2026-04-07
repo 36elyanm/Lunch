@@ -79,6 +79,93 @@
 
         </div>
 
+        <!-- Location / Cuisine Section -->
+        <div class="location-section">
+          <h3 class="prefs-title">🌍 Cuisine Style <span class="optional-tag">optional</span></h3>
+          <p class="location-desc">Tell us where you are (or pick a country) and we'll suggest meals inspired by local ingredients and flavours.</p>
+
+          <div class="location-row">
+            <button type="button" class="btn-locate" id="locateBtn" onclick="detectLocation()">
+              <span id="locateIcon">📍</span>
+              <span id="locateText">Use my location</span>
+            </button>
+
+            <span class="location-or">or</span>
+
+            <div class="country-wrap">
+              <select id="countrySelect" name="country">
+                <option value="">— Choose a country —</option>
+                <optgroup label="Africa">
+                  <option value="Ethiopia">🇪🇹 Ethiopia</option>
+                  <option value="Ghana">🇬🇭 Ghana</option>
+                  <option value="Kenya">🇰🇪 Kenya</option>
+                  <option value="Morocco">🇲🇦 Morocco</option>
+                  <option value="Nigeria">🇳🇬 Nigeria</option>
+                  <option value="South Africa">🇿🇦 South Africa</option>
+                  <option value="Egypt">🇪🇬 Egypt</option>
+                  <option value="Tunisia">🇹🇳 Tunisia</option>
+                </optgroup>
+                <optgroup label="Americas">
+                  <option value="Argentina">🇦🇷 Argentina</option>
+                  <option value="Brazil">🇧🇷 Brazil</option>
+                  <option value="Canada">🇨🇦 Canada</option>
+                  <option value="Chile">🇨🇱 Chile</option>
+                  <option value="Colombia">🇨🇴 Colombia</option>
+                  <option value="Cuba">🇨🇺 Cuba</option>
+                  <option value="Mexico">🇲🇽 Mexico</option>
+                  <option value="Peru">🇵🇪 Peru</option>
+                  <option value="United States">🇺🇸 United States</option>
+                </optgroup>
+                <optgroup label="Asia">
+                  <option value="Bangladesh">🇧🇩 Bangladesh</option>
+                  <option value="China">🇨🇳 China</option>
+                  <option value="India">🇮🇳 India</option>
+                  <option value="Indonesia">🇮🇩 Indonesia</option>
+                  <option value="Iran">🇮🇷 Iran</option>
+                  <option value="Israel">🇮🇱 Israel</option>
+                  <option value="Japan">🇯🇵 Japan</option>
+                  <option value="Jordan">🇯🇴 Jordan</option>
+                  <option value="Lebanon">🇱🇧 Lebanon</option>
+                  <option value="Malaysia">🇲🇾 Malaysia</option>
+                  <option value="Pakistan">🇵🇰 Pakistan</option>
+                  <option value="Philippines">🇵🇭 Philippines</option>
+                  <option value="Saudi Arabia">🇸🇦 Saudi Arabia</option>
+                  <option value="Singapore">🇸🇬 Singapore</option>
+                  <option value="South Korea">🇰🇷 South Korea</option>
+                  <option value="Sri Lanka">🇱🇰 Sri Lanka</option>
+                  <option value="Taiwan">🇹🇼 Taiwan</option>
+                  <option value="Thailand">🇹🇭 Thailand</option>
+                  <option value="Turkey">🇹🇷 Turkey</option>
+                  <option value="Vietnam">🇻🇳 Vietnam</option>
+                </optgroup>
+                <optgroup label="Europe">
+                  <option value="France">🇫🇷 France</option>
+                  <option value="Germany">🇩🇪 Germany</option>
+                  <option value="Greece">🇬🇷 Greece</option>
+                  <option value="Italy">🇮🇹 Italy</option>
+                  <option value="Netherlands">🇳🇱 Netherlands</option>
+                  <option value="Poland">🇵🇱 Poland</option>
+                  <option value="Portugal">🇵🇹 Portugal</option>
+                  <option value="Russia">🇷🇺 Russia</option>
+                  <option value="Spain">🇪🇸 Spain</option>
+                  <option value="Sweden">🇸🇪 Sweden</option>
+                  <option value="United Kingdom">🇬🇧 United Kingdom</option>
+                </optgroup>
+                <optgroup label="Oceania">
+                  <option value="Australia">🇦🇺 Australia</option>
+                  <option value="New Zealand">🇳🇿 New Zealand</option>
+                </optgroup>
+              </select>
+            </div>
+          </div>
+
+          <!-- Detected / chosen country badge -->
+          <div class="country-badge" id="countryBadge" hidden>
+            <span id="countryBadgeText"></span>
+            <button type="button" class="clear-country" onclick="clearCountry()" title="Remove">✕</button>
+          </div>
+        </div>
+
         <!-- Preferences Section -->
         <div class="prefs-section">
           <h3 class="prefs-title">🙋 Your Preferences <span class="optional-tag">optional</span></h3>
@@ -248,14 +335,95 @@
       analyzeBtn.disabled = !(chosen.fridge && chosen.lunchbox);
     }
 
-    // Form submit
+    // ===== Location / Country =====
+    let detectedCountry = '';
+
+    const countrySelect = document.getElementById('countrySelect');
+    countrySelect.addEventListener('change', () => {
+      if (countrySelect.value) {
+        detectedCountry = countrySelect.value;
+        showCountryBadge(countrySelect.value, '🌍');
+      } else {
+        clearCountry();
+      }
+    });
+
+    function detectLocation() {
+      if (!navigator.geolocation) {
+        showError('Geolocation is not supported by your browser. Please choose a country manually.');
+        return;
+      }
+      const btn = document.getElementById('locateBtn');
+      document.getElementById('locateIcon').textContent = '⏳';
+      document.getElementById('locateText').textContent = 'Detecting…';
+      btn.disabled = true;
+
+      navigator.geolocation.getCurrentPosition(
+        async pos => {
+          try {
+            const { latitude, longitude } = pos.coords;
+            const res = await fetch(
+              `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`,
+              { headers: { 'Accept-Language': 'en' } }
+            );
+            const geo = await res.json();
+            const country = geo.address?.country || '';
+            if (country) {
+              detectedCountry = country;
+              countrySelect.value = '';          // clear manual selection
+              showCountryBadge(country, '📍');
+            } else {
+              showError('Could not determine your country. Please choose one manually.');
+            }
+          } catch {
+            showError('Location lookup failed. Please choose a country manually.');
+          } finally {
+            resetLocateBtn();
+          }
+        },
+        err => {
+          const msgs = {
+            1: 'Location permission denied. Please choose a country manually.',
+            2: 'Location unavailable. Please choose a country manually.',
+            3: 'Location request timed out. Please choose a country manually.',
+          };
+          showError(msgs[err.code] || 'Could not get location.');
+          resetLocateBtn();
+        },
+        { timeout: 10000 }
+      );
+    }
+
+    function resetLocateBtn() {
+      const btn = document.getElementById('locateBtn');
+      document.getElementById('locateIcon').textContent = '📍';
+      document.getElementById('locateText').textContent = 'Use my location';
+      btn.disabled = false;
+    }
+
+    function showCountryBadge(country, icon) {
+      const badge = document.getElementById('countryBadge');
+      document.getElementById('countryBadgeText').textContent = `${icon} ${country}`;
+      badge.hidden = false;
+    }
+
+    function clearCountry() {
+      detectedCountry = '';
+      countrySelect.value = '';
+      document.getElementById('countryBadge').hidden = true;
+    }
+
+    // ===== Form submit =====
     document.getElementById('analyzeForm').addEventListener('submit', async e => {
       e.preventDefault();
       showLoading();
 
+      const country = detectedCountry || countrySelect.value || '';
+
       const formData = new FormData();
       formData.append('fridge',   chosen.fridge);
       formData.append('lunchbox', chosen.lunchbox);
+      if (country) formData.append('country', country);
 
       // Animate loading steps
       animateSteps();
@@ -324,6 +492,16 @@
           </div>`;
       }
 
+      const countryUsed = detectedCountry || countrySelect.value || '';
+      const countryHtml = countryUsed ? `
+        <div class="info-card">
+          <div class="info-icon">🌍</div>
+          <div class="info-body">
+            <strong>Cuisine Style</strong>
+            <p>${countryUsed} — regional flavours applied</p>
+          </div>
+        </div>` : '';
+
       const infoCards = document.getElementById('infoCards');
       infoCards.innerHTML = `
         <div class="info-card">
@@ -340,6 +518,7 @@
             <p>${data.lunchbox_capacity}</p>
           </div>
         </div>
+        ${countryHtml}
         ${prefsHtml}
       `;
 
