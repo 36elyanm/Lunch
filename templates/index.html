@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LunchBox AI — Smart Meal Planner</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+
+  <header>
+    <div class="header-inner">
+      <div class="logo">🥗 LunchBox AI</div>
+      <p class="tagline">Snap your fridge &amp; lunchbox — AI builds your perfect balanced meal</p>
+    </div>
+  </header>
+
+  <main>
+
+    <!-- Upload Section -->
+    <section class="upload-section" id="uploadSection">
+      <form id="analyzeForm" enctype="multipart/form-data">
+
+        <div class="upload-grid">
+
+          <!-- Fridge Upload -->
+          <div class="upload-card" id="fridgeCard">
+            <input type="file" id="fridgeInput" name="fridge" accept="image/*" capture="environment" hidden />
+            <div class="upload-zone" id="fridgeZone" onclick="document.getElementById('fridgeInput').click()">
+              <div class="upload-icon">🧊</div>
+              <div class="upload-label">Photo of your Fridge</div>
+              <div class="upload-hint">Tap to upload or take a photo</div>
+            </div>
+            <div class="preview-wrap" id="fridgePreview" hidden>
+              <img id="fridgeImg" src="" alt="Fridge preview" />
+              <button type="button" class="remove-btn" onclick="removeImage('fridge')">✕ Remove</button>
+            </div>
+          </div>
+
+          <!-- Lunchbox Upload -->
+          <div class="upload-card" id="lunchboxCard">
+            <input type="file" id="lunchboxInput" name="lunchbox" accept="image/*" capture="environment" hidden />
+            <div class="upload-zone" id="lunchboxZone" onclick="document.getElementById('lunchboxInput').click()">
+              <div class="upload-icon">🍱</div>
+              <div class="upload-label">Photo of your Lunchbox</div>
+              <div class="upload-hint">Tap to upload or take a photo</div>
+            </div>
+            <div class="preview-wrap" id="lunchboxPreview" hidden>
+              <img id="lunchboxImg" src="" alt="Lunchbox preview" />
+              <button type="button" class="remove-btn" onclick="removeImage('lunchbox')">✕ Remove</button>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Preferences Section -->
+        <div class="prefs-section">
+          <h3 class="prefs-title">🙋 Your Preferences <span class="optional-tag">optional</span></h3>
+
+          <div class="prefs-grid">
+            <div class="pref-field pref-allergy">
+              <label for="allergies">
+                <span class="pref-icon">⚠️</span> Allergies
+              </label>
+              <input
+                type="text"
+                id="allergies"
+                name="allergies"
+                placeholder="e.g. peanuts, shellfish, gluten, dairy…"
+                autocomplete="off"
+              />
+              <span class="pref-hint">These will be strictly excluded from all meals</span>
+            </div>
+
+            <div class="pref-field pref-like">
+              <label for="likes">
+                <span class="pref-icon">💚</span> Foods I like
+              </label>
+              <input
+                type="text"
+                id="likes"
+                name="likes"
+                placeholder="e.g. avocado, chicken, pasta, spicy food…"
+                autocomplete="off"
+              />
+              <span class="pref-hint">AI will prioritise these when possible</span>
+            </div>
+
+            <div class="pref-field pref-dislike">
+              <label for="dislikes">
+                <span class="pref-icon">🚫</span> Foods I dislike
+              </label>
+              <input
+                type="text"
+                id="dislikes"
+                name="dislikes"
+                placeholder="e.g. onions, mushrooms, olives, fish…"
+                autocomplete="off"
+              />
+              <span class="pref-hint">These will be avoided in suggestions</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="submit-area">
+          <button type="submit" class="btn-analyze" id="analyzeBtn" disabled>
+            <span class="btn-text">✨ Generate Meal Ideas</span>
+          </button>
+          <p class="privacy-note">🔒 Images are sent directly to Claude AI and never stored</p>
+        </div>
+
+      </form>
+    </section>
+
+    <!-- Loading State -->
+    <section class="loading-section" id="loadingSection" hidden>
+      <div class="loading-inner">
+        <div class="spinner"></div>
+        <h2>Analyzing your ingredients…</h2>
+        <p>Claude is checking your fridge, sizing your lunchbox, and planning balanced meals for you.</p>
+        <div class="loading-steps">
+          <div class="step" id="step1">🧊 Identifying fridge ingredients</div>
+          <div class="step" id="step2">🍱 Assessing lunchbox capacity</div>
+          <div class="step" id="step3">🥗 Crafting balanced meal plans</div>
+          <div class="step" id="step4">✅ Checking nutrition (protein · carbs · healthy fat)</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Results Section -->
+    <section class="results-section" id="resultsSection" hidden>
+
+      <div class="results-header">
+        <h2>Your Personalised Lunch Ideas</h2>
+        <button class="btn-reset" onclick="resetApp()">↩ Start over</button>
+      </div>
+
+      <!-- Detected Info -->
+      <div class="info-cards" id="infoCards"></div>
+
+      <!-- Meal Cards -->
+      <div class="meals-grid" id="mealsGrid"></div>
+
+      <!-- Tips -->
+      <div class="tips-section" id="tipsSection" hidden>
+        <h3>💡 Nutrition Tips</h3>
+        <ul id="tipsList"></ul>
+      </div>
+
+    </section>
+
+    <!-- Error Banner -->
+    <div class="error-banner" id="errorBanner" hidden>
+      <span id="errorText"></span>
+      <button onclick="dismissError()">✕</button>
+    </div>
+
+  </main>
+
+  <footer>
+    <p>Powered by <strong>Claude Opus 4.6</strong> · All meals balanced with protein, carbs &amp; healthy fats · No trans fat</p>
+  </footer>
+
+  <script>
+    const fridgeInput = document.getElementById('fridgeInput');
+    const lunchboxInput = document.getElementById('lunchboxInput');
+    const analyzeBtn = document.getElementById('analyzeBtn');
+
+    let fridgeReady = false;
+    let lunchboxReady = false;
+
+    // Drag-and-drop support
+    ['fridgeZone', 'lunchboxZone'].forEach(zoneId => {
+      const zone = document.getElementById(zoneId);
+      zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag-over'); });
+      zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
+      zone.addEventListener('drop', e => {
+        e.preventDefault();
+        zone.classList.remove('drag-over');
+        const file = e.dataTransfer.files[0];
+        if (!file) return;
+        const type = zoneId === 'fridgeZone' ? 'fridge' : 'lunchbox';
+        handleFile(type, file);
+      });
+    });
+
+    fridgeInput.addEventListener('change', e => {
+      if (e.target.files[0]) handleFile('fridge', e.target.files[0]);
+    });
+    lunchboxInput.addEventListener('change', e => {
+      if (e.target.files[0]) handleFile('lunchbox', e.target.files[0]);
+    });
+
+    function handleFile(type, file) {
+      if (!file.type.startsWith('image/')) {
+        showError('Please select an image file.');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = e => {
+        if (type === 'fridge') {
+          document.getElementById('fridgeImg').src = e.target.result;
+          document.getElementById('fridgeZone').hidden = true;
+          document.getElementById('fridgePreview').hidden = false;
+          // Set the file on the input for form submission
+          const dt = new DataTransfer();
+          dt.items.add(file);
+          fridgeInput.files = dt.files;
+          fridgeReady = true;
+        } else {
+          document.getElementById('lunchboxImg').src = e.target.result;
+          document.getElementById('lunchboxZone').hidden = true;
+          document.getElementById('lunchboxPreview').hidden = false;
+          const dt = new DataTransfer();
+          dt.items.add(file);
+          lunchboxInput.files = dt.files;
+          lunchboxReady = true;
+        }
+        updateBtn();
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function removeImage(type) {
+      if (type === 'fridge') {
+        fridgeInput.value = '';
+        document.getElementById('fridgeZone').hidden = false;
+        document.getElementById('fridgePreview').hidden = true;
+        fridgeReady = false;
+      } else {
+        lunchboxInput.value = '';
+        document.getElementById('lunchboxZone').hidden = false;
+        document.getElementById('lunchboxPreview').hidden = true;
+        lunchboxReady = false;
+      }
+      updateBtn();
+    }
+
+    function updateBtn() {
+      analyzeBtn.disabled = !(fridgeReady && lunchboxReady);
+    }
+
+    // Form submit
+    document.getElementById('analyzeForm').addEventListener('submit', async e => {
+      e.preventDefault();
+      showLoading();
+
+      const formData = new FormData();
+      formData.append('fridge', fridgeInput.files[0]);
+      formData.append('lunchbox', lunchboxInput.files[0]);
+
+      // Animate loading steps
+      animateSteps();
+
+      try {
+        const res = await fetch('/analyze', { method: 'POST', body: formData });
+        const json = await res.json();
+
+        if (!res.ok || json.error) {
+          showError(json.error || 'Something went wrong. Please try again.');
+          hideLoading();
+          return;
+        }
+
+        renderResults(json.data);
+      } catch (err) {
+        showError('Network error. Please check your connection and try again.');
+        hideLoading();
+      }
+    });
+
+    function animateSteps() {
+      const steps = ['step1', 'step2', 'step3', 'step4'];
+      steps.forEach((id, i) => {
+        setTimeout(() => {
+          document.getElementById(id).classList.add('active');
+        }, i * 1800);
+      });
+    }
+
+    function showLoading() {
+      document.getElementById('uploadSection').hidden = true;
+      document.getElementById('loadingSection').hidden = false;
+      document.getElementById('resultsSection').hidden = true;
+    }
+
+    function hideLoading() {
+      document.getElementById('uploadSection').hidden = false;
+      document.getElementById('loadingSection').hidden = true;
+      // Reset step animations
+      ['step1','step2','step3','step4'].forEach(id => {
+        document.getElementById(id).classList.remove('active');
+      });
+    }
+
+    function renderResults(data) {
+      document.getElementById('loadingSection').hidden = true;
+      document.getElementById('resultsSection').hidden = false;
+
+      // Info cards
+      const allergies = document.getElementById('allergies').value.trim();
+      const likes     = document.getElementById('likes').value.trim();
+      const dislikes  = document.getElementById('dislikes').value.trim();
+
+      let prefsHtml = '';
+      if (allergies || likes || dislikes) {
+        prefsHtml = `
+          <div class="info-card info-card-prefs">
+            <div class="info-icon">🙋</div>
+            <div class="info-body">
+              <strong>Your Preferences Applied</strong>
+              ${allergies ? `<p><span class="pref-tag pref-tag-allergy">⚠️ Allergies</span> ${allergies}</p>` : ''}
+              ${likes     ? `<p><span class="pref-tag pref-tag-like">💚 Likes</span> ${likes}</p>` : ''}
+              ${dislikes  ? `<p><span class="pref-tag pref-tag-dislike">🚫 Dislikes</span> ${dislikes}</p>` : ''}
+            </div>
+          </div>`;
+      }
+
+      const infoCards = document.getElementById('infoCards');
+      infoCards.innerHTML = `
+        <div class="info-card">
+          <div class="info-icon">🧊</div>
+          <div class="info-body">
+            <strong>Detected Ingredients</strong>
+            <p>${data.fridge_ingredients.join(', ')}</p>
+          </div>
+        </div>
+        <div class="info-card">
+          <div class="info-icon">🍱</div>
+          <div class="info-body">
+            <strong>Lunchbox Capacity</strong>
+            <p>${data.lunchbox_capacity}</p>
+          </div>
+        </div>
+        ${prefsHtml}
+      `;
+
+      // Meal cards
+      const mealsGrid = document.getElementById('mealsGrid');
+      mealsGrid.innerHTML = data.meals.map((meal, i) => `
+        <div class="meal-card" style="animation-delay: ${i * 0.15}s">
+          <div class="meal-number">${i + 1}</div>
+          <h3 class="meal-name">${meal.name}</h3>
+          <p class="meal-desc">${meal.description}</p>
+
+          <div class="meal-meta">
+            <span class="badge badge-time">⏱ ${meal.prep_time}</span>
+            <span class="badge badge-fit">${meal.fits_lunchbox ? '✅ Fits lunchbox' : '⚠️ May be tight'}</span>
+            <span class="badge badge-cal">🔥 ${meal.nutrition.calories}</span>
+          </div>
+
+          <div class="nutrition-grid">
+            <div class="nut-cell nut-protein">
+              <div class="nut-icon">💪</div>
+              <div class="nut-label">Protein</div>
+              <div class="nut-val">${meal.nutrition.protein}</div>
+            </div>
+            <div class="nut-cell nut-carbs">
+              <div class="nut-icon">🌾</div>
+              <div class="nut-label">Carbs</div>
+              <div class="nut-val">${meal.nutrition.carbs}</div>
+            </div>
+            <div class="nut-cell nut-fat">
+              <div class="nut-icon">🥑</div>
+              <div class="nut-label">Healthy Fat</div>
+              <div class="nut-val">${meal.nutrition.fat}</div>
+            </div>
+          </div>
+
+          <details class="ingredients-detail">
+            <summary>🛒 Ingredients (${meal.ingredients.length})</summary>
+            <ul>${meal.ingredients.map(i => `<li>${i}</li>`).join('')}</ul>
+          </details>
+
+          <details class="assembly-detail">
+            <summary>📋 How to assemble</summary>
+            <p>${meal.assembly}</p>
+          </details>
+        </div>
+      `).join('');
+
+      // Tips
+      if (data.tips && data.tips.length > 0) {
+        document.getElementById('tipsSection').hidden = false;
+        document.getElementById('tipsList').innerHTML = data.tips.map(t => `<li>${t}</li>`).join('');
+      }
+    }
+
+    function resetApp() {
+      document.getElementById('resultsSection').hidden = true;
+      document.getElementById('uploadSection').hidden = false;
+      removeImage('fridge');
+      removeImage('lunchbox');
+      // Reset step classes
+      ['step1','step2','step3','step4'].forEach(id => {
+        document.getElementById(id).classList.remove('active');
+      });
+    }
+
+    function showError(msg) {
+      const banner = document.getElementById('errorBanner');
+      document.getElementById('errorText').textContent = msg;
+      banner.hidden = false;
+    }
+
+    function dismissError() {
+      document.getElementById('errorBanner').hidden = true;
+    }
+  </script>
+</body>
+</html>
