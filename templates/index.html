@@ -25,11 +25,25 @@
 
           <!-- Fridge Upload -->
           <div class="upload-card" id="fridgeCard">
-            <input type="file" id="fridgeInput" name="fridge" accept="image/*" capture="environment" hidden />
-            <div class="upload-zone" id="fridgeZone" onclick="document.getElementById('fridgeInput').click()">
+            <!-- Library picker (no capture — lets OS show photos/files) -->
+            <input type="file" id="fridgeLibrary" name="fridge" accept="image/*" hidden />
+            <!-- Camera capture -->
+            <input type="file" id="fridgeCamera" accept="image/*" capture="environment" hidden />
+
+            <div class="upload-zone" id="fridgeZone">
               <div class="upload-icon">🧊</div>
               <div class="upload-label">Photo of your Fridge</div>
-              <div class="upload-hint">Tap to upload or take a photo</div>
+              <div class="upload-actions">
+                <button type="button" class="pick-btn pick-library"
+                        onclick="document.getElementById('fridgeLibrary').click()">
+                  🖼️ Photo Library
+                </button>
+                <button type="button" class="pick-btn pick-camera"
+                        onclick="document.getElementById('fridgeCamera').click()">
+                  📷 Camera
+                </button>
+              </div>
+              <div class="upload-hint drag-hint">or drag &amp; drop an image here</div>
             </div>
             <div class="preview-wrap" id="fridgePreview" hidden>
               <img id="fridgeImg" src="" alt="Fridge preview" />
@@ -39,11 +53,23 @@
 
           <!-- Lunchbox Upload -->
           <div class="upload-card" id="lunchboxCard">
-            <input type="file" id="lunchboxInput" name="lunchbox" accept="image/*" capture="environment" hidden />
-            <div class="upload-zone" id="lunchboxZone" onclick="document.getElementById('lunchboxInput').click()">
+            <input type="file" id="lunchboxLibrary" name="lunchbox" accept="image/*" hidden />
+            <input type="file" id="lunchboxCamera" accept="image/*" capture="environment" hidden />
+
+            <div class="upload-zone" id="lunchboxZone">
               <div class="upload-icon">🍱</div>
               <div class="upload-label">Photo of your Lunchbox</div>
-              <div class="upload-hint">Tap to upload or take a photo</div>
+              <div class="upload-actions">
+                <button type="button" class="pick-btn pick-library"
+                        onclick="document.getElementById('lunchboxLibrary').click()">
+                  🖼️ Photo Library
+                </button>
+                <button type="button" class="pick-btn pick-camera"
+                        onclick="document.getElementById('lunchboxCamera').click()">
+                  📷 Camera
+                </button>
+              </div>
+              <div class="upload-hint drag-hint">or drag &amp; drop an image here</div>
             </div>
             <div class="preview-wrap" id="lunchboxPreview" hidden>
               <img id="lunchboxImg" src="" alt="Lunchbox preview" />
@@ -162,12 +188,24 @@
   </footer>
 
   <script>
-    const fridgeInput = document.getElementById('fridgeInput');
-    const lunchboxInput = document.getElementById('lunchboxInput');
     const analyzeBtn = document.getElementById('analyzeBtn');
 
-    let fridgeReady = false;
-    let lunchboxReady = false;
+    // Holds the actual File objects chosen by the user (from any source)
+    const chosen = { fridge: null, lunchbox: null };
+
+    // Wire all four file inputs
+    [
+      ['fridgeLibrary',   'fridge'],
+      ['fridgeCamera',    'fridge'],
+      ['lunchboxLibrary', 'lunchbox'],
+      ['lunchboxCamera',  'lunchbox'],
+    ].forEach(([id, type]) => {
+      document.getElementById(id).addEventListener('change', e => {
+        if (e.target.files[0]) handleFile(type, e.target.files[0]);
+        // Reset input so the same file can be reselected after removal
+        e.target.value = '';
+      });
+    });
 
     // Drag-and-drop support
     ['fridgeZone', 'lunchboxZone'].forEach(zoneId => {
@@ -179,16 +217,8 @@
         zone.classList.remove('drag-over');
         const file = e.dataTransfer.files[0];
         if (!file) return;
-        const type = zoneId === 'fridgeZone' ? 'fridge' : 'lunchbox';
-        handleFile(type, file);
+        handleFile(zoneId === 'fridgeZone' ? 'fridge' : 'lunchbox', file);
       });
-    });
-
-    fridgeInput.addEventListener('change', e => {
-      if (e.target.files[0]) handleFile('fridge', e.target.files[0]);
-    });
-    lunchboxInput.addEventListener('change', e => {
-      if (e.target.files[0]) handleFile('lunchbox', e.target.files[0]);
     });
 
     function handleFile(type, file) {
@@ -197,47 +227,25 @@
         return;
       }
       const reader = new FileReader();
-      reader.onload = e => {
-        if (type === 'fridge') {
-          document.getElementById('fridgeImg').src = e.target.result;
-          document.getElementById('fridgeZone').hidden = true;
-          document.getElementById('fridgePreview').hidden = false;
-          // Set the file on the input for form submission
-          const dt = new DataTransfer();
-          dt.items.add(file);
-          fridgeInput.files = dt.files;
-          fridgeReady = true;
-        } else {
-          document.getElementById('lunchboxImg').src = e.target.result;
-          document.getElementById('lunchboxZone').hidden = true;
-          document.getElementById('lunchboxPreview').hidden = false;
-          const dt = new DataTransfer();
-          dt.items.add(file);
-          lunchboxInput.files = dt.files;
-          lunchboxReady = true;
-        }
+      reader.onload = ev => {
+        document.getElementById(type === 'fridge' ? 'fridgeImg' : 'lunchboxImg').src = ev.target.result;
+        document.getElementById(type === 'fridge' ? 'fridgeZone' : 'lunchboxZone').hidden = true;
+        document.getElementById(type === 'fridge' ? 'fridgePreview' : 'lunchboxPreview').hidden = false;
+        chosen[type] = file;
         updateBtn();
       };
       reader.readAsDataURL(file);
     }
 
     function removeImage(type) {
-      if (type === 'fridge') {
-        fridgeInput.value = '';
-        document.getElementById('fridgeZone').hidden = false;
-        document.getElementById('fridgePreview').hidden = true;
-        fridgeReady = false;
-      } else {
-        lunchboxInput.value = '';
-        document.getElementById('lunchboxZone').hidden = false;
-        document.getElementById('lunchboxPreview').hidden = true;
-        lunchboxReady = false;
-      }
+      chosen[type] = null;
+      document.getElementById(type === 'fridge' ? 'fridgeZone' : 'lunchboxZone').hidden = false;
+      document.getElementById(type === 'fridge' ? 'fridgePreview' : 'lunchboxPreview').hidden = true;
       updateBtn();
     }
 
     function updateBtn() {
-      analyzeBtn.disabled = !(fridgeReady && lunchboxReady);
+      analyzeBtn.disabled = !(chosen.fridge && chosen.lunchbox);
     }
 
     // Form submit
@@ -246,8 +254,8 @@
       showLoading();
 
       const formData = new FormData();
-      formData.append('fridge', fridgeInput.files[0]);
-      formData.append('lunchbox', lunchboxInput.files[0]);
+      formData.append('fridge',   chosen.fridge);
+      formData.append('lunchbox', chosen.lunchbox);
 
       // Animate loading steps
       animateSteps();
@@ -391,7 +399,7 @@
       document.getElementById('uploadSection').hidden = false;
       removeImage('fridge');
       removeImage('lunchbox');
-      // Reset step classes
+      document.getElementById('tipsSection').hidden = true;
       ['step1','step2','step3','step4'].forEach(id => {
         document.getElementById(id).classList.remove('active');
       });

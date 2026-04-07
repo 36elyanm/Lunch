@@ -66,17 +66,48 @@ main { flex: 1; max-width: 900px; margin: 0 auto; width: 100%; padding: 2rem 1.2
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 2.5rem 1.5rem;
-  cursor: pointer;
+  padding: 1.75rem 1.5rem;
   transition: background .15s;
-  min-height: 200px;
+  min-height: 210px;
+  gap: .5rem;
 }
-.upload-zone:hover, .upload-zone.drag-over { background: #f0fdf4; border-color: var(--green); }
 .upload-zone.drag-over { background: #dcfce7; }
 
-.upload-icon { font-size: 2.8rem; margin-bottom: .75rem; }
-.upload-label { font-weight: 700; font-size: 1rem; margin-bottom: .3rem; }
-.upload-hint   { color: var(--muted); font-size: .85rem; }
+.upload-icon  { font-size: 2.8rem; }
+.upload-label { font-weight: 700; font-size: 1rem; }
+.drag-hint    { color: var(--muted); font-size: .78rem; margin-top: .2rem; }
+
+/* Two-button row inside each zone */
+.upload-actions {
+  display: flex;
+  gap: .6rem;
+  margin-top: .5rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.pick-btn {
+  padding: .55rem 1.1rem;
+  border-radius: 50px;
+  font-size: .88rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1.5px solid transparent;
+  transition: all .18s;
+  white-space: nowrap;
+}
+.pick-library {
+  background: #eff6ff;
+  color: #1d4ed8;
+  border-color: #bfdbfe;
+}
+.pick-library:hover { background: #dbeafe; border-color: #93c5fd; }
+
+.pick-camera {
+  background: #f0fdf4;
+  color: #166534;
+  border-color: #bbf7d0;
+}
+.pick-camera:hover { background: #dcfce7; border-color: #86efac; }
 
 .preview-wrap { position: relative; }
 .preview-wrap img {
