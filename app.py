@@ -76,7 +76,7 @@ def encode_image(image_file) -> tuple[str, str]:
     return b64, media_type
 
 
-def build_preferences_text(allergies: str, likes: str, dislikes: str, country: str) -> str:
+def build_preferences_text(allergies: str, likes: str, dislikes: str, brands: str, country: str) -> str:
     """Build a preferences block to inject into the user message."""
     lines = []
     if country.strip():
@@ -85,6 +85,12 @@ def build_preferences_text(allergies: str, likes: str, dislikes: str, country: s
             "Please draw inspiration from that country's traditional ingredients, spice profiles, "
             "and typical lunch dishes. Adapt the meal names, seasoning, and presentation to reflect "
             "local culinary culture while still using the ingredients visible in my fridge."
+        )
+    if brands.strip():
+        lines.append(
+            f"BRANDS IN MY FRIDGE: {brands.strip()}. "
+            "Use these specific brand names when referencing those products in ingredient lists "
+            "and use their known nutritional profiles for more accurate calorie and macro estimates."
         )
     if allergies.strip():
         lines.append(f"ALLERGIES (MUST avoid completely): {allergies.strip()}")
@@ -117,8 +123,9 @@ def analyze():
     allergies = request.form.get("allergies", "")
     likes = request.form.get("likes", "")
     dislikes = request.form.get("dislikes", "")
+    brands = request.form.get("brands", "")
     country = request.form.get("country", "").strip()
-    prefs_text = build_preferences_text(allergies, likes, dislikes, country)
+    prefs_text = build_preferences_text(allergies, likes, dislikes, brands, country)
 
     try:
         fridge_b64, fridge_media = encode_image(fridge_file)
