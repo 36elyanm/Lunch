@@ -1,8 +1,7 @@
 import os
 import json
-import io
-import PIL.Image
-import google.generativeai as genai
+import base64
+import anthropic
 from flask import Flask, render_template, request, jsonify
 from dotenv import load_dotenv
 
@@ -11,7 +10,7 @@ load_dotenv()
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 20 * 1024 * 1024  # 20MB max upload
 
-genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
+client = anthropic.Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
 
 SYSTEM_PROMPT = """You are a nutritionist and meal-prep expert. Your job is to:
 1. Identify all visible ingredients in the fridge photo
@@ -58,10 +57,21 @@ Make sure every meal genuinely fits the assessed lunchbox size.
 Return JSON only — no markdown, no explanation outside the JSON."""
 
 
-def decode_image(image_file) -> PIL.Image.Image:
-    """Decode uploaded image file to PIL Image."""
+def encode_image(image_file) -> tuple[str, str]:
+    """Encode uploaded image file to base64 and detect media type."""
     data = image_file.read()
-    return PIL.Image.open(io.BytesIO(data))
+    b64 = base64.standard_b64encode(data).decode("utf-8")
+    # Detect media type from file content
+    filename = image_file.filename.lower()
+    if filename.endswith(".png"):
+        media_type = "image/png"
+    elif filename.endswith(".gif"):
+        media_type = "image/gif"
+    elif filename.endswith(".webp"):
+        media_type = "image/webp"
+    else:
+        media_type = "image/jpeg"
+    return b64, media_type
 
 
 def build_preferences_text(allergies: str, likes: str, dislikes: str, brands: str, country: str) -> str:
@@ -116,8 +126,8 @@ def analyze():
     prefs_text = build_preferences_text(allergies, likes, dislikes, brands, country)
 
     try:
-        fridge_img = decode_image(fridge_file)
-        lunchbox_img = decode_image(lunchbox_file)
+        fridge_b64, fridge_media = encode_image(fridge_file)
+        lunchbox_b64, lunchbox_media = encode_image(lunchbox_file)
     except Exception:
         return jsonify({"error": "Failed to process images. Please try again."}), 400
 
@@ -131,20 +141,45 @@ def analyze():
     )
 
     try:
-        model = genai.GenerativeModel(
-            model_name="gemini-2.0-flash",
-            system_instruction=SYSTEM_PROMPT,
+        response = client.messages.create(
+            model="claude-opus-4-6",
+            max_tokens=16000,
+            thinking={"type": "enabled", "budget_tokens": 10000},
+            system=SYSTEM_PROMPT,
+            messages=[
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": "Here is a photo of my fridge:"},
+                        {
+                            "type": "image",
+                            "source": {
+                                "type": "base64",
+                                "media_type": fridge_media,
+                                "data": fridge_b64,
+                            },
+                        },
+                        {"type": "text", "text": "And here is my lunchbox:"},
+                        {
+                            "type": "image",
+                            "source": {
+                                "type": "base64",
+                                "media_type": lunchbox_media,
+                                "data": lunchbox_b64,
+                            },
+                        },
+                        {"type": "text", "text": user_message},
+                    ],
+                }
+            ],
         )
 
-        response = model.generate_content([
-            "Here is a photo of my fridge:",
-            fridge_img,
-            "And here is my lunchbox:",
-            lunchbox_img,
-            user_message,
-        ])
-
-        result_text = response.text.strip()
+        # Extract text from response (skip thinking blocks)
+        result_text = ""
+        for block in response.content:
+            if block.type == "text":
+                result_text = block.text.strip()
+                break
 
         # Strip markdown code fences if present
         if result_text.startswith("```"):
@@ -156,10 +191,12 @@ def analyze():
 
     except Exception as e:
         err = str(e)
-        if "API_KEY" in err or "api key" in err.lower():
-            return jsonify({"error": "Invalid API key. Please check your GEMINI_API_KEY."}), 401
-        if "quota" in err.lower() or "rate" in err.lower():
+        if "API_KEY" in err or "api key" in err.lower() or "authentication" in err.lower():
+            return jsonify({"error": "Invalid API key. Please check your ANTHROPIC_API_KEY."}), 401
+        if "quota" in err.lower() or "rate" in err.lower() or "overloaded" in err.lower():
             return jsonify({"error": "Rate limit reached. Please wait a moment and try again."}), 429
+        if "credit" in err.lower() or "billing" in err.lower():
+            return jsonify({"error": "Insufficient credits. Please check your Anthropic account."}), 402
         return jsonify({"error": f"Analysis failed: {err}"}), 500
 
 
