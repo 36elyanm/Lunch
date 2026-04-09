@@ -372,6 +372,7 @@ details p {
   box-shadow: var(--shadow);
   z-index: 100;
 }
+.error-banner[hidden] { display: none !important; }
 .error-banner button {
   background: none;
   border: none;
