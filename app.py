@@ -1,7 +1,9 @@
 import os
+import io
 import json
 import base64
 import anthropic
+import PIL.Image
 from flask import Flask, render_template, request, jsonify
 from dotenv import load_dotenv
 
@@ -58,20 +60,31 @@ Return JSON only — no markdown, no explanation outside the JSON."""
 
 
 def encode_image(image_file) -> tuple[str, str]:
-    """Encode uploaded image file to base64 and detect media type."""
+    """Encode uploaded image to base64, resizing to stay under Claude's 5MB limit."""
     data = image_file.read()
+    img = PIL.Image.open(io.BytesIO(data))
+
+    # Convert to RGB for JPEG compatibility
+    if img.mode in ("RGBA", "P", "LA"):
+        img = img.convert("RGB")
+
+    # Resize so longest side is at most 1568px (Claude recommended max)
+    max_side = 1568
+    if img.width > max_side or img.height > max_side:
+        img.thumbnail((max_side, max_side), PIL.Image.LANCZOS)
+
+    # Compress to JPEG, reducing quality until under 3.9MB raw (~5MB base64)
+    quality = 85
+    while True:
+        buf = io.BytesIO()
+        img.save(buf, format="JPEG", quality=quality, optimize=True)
+        data = buf.getvalue()
+        if len(data) <= 3_900_000 or quality <= 30:
+            break
+        quality -= 10
+
     b64 = base64.standard_b64encode(data).decode("utf-8")
-    # Detect media type from file content
-    filename = image_file.filename.lower()
-    if filename.endswith(".png"):
-        media_type = "image/png"
-    elif filename.endswith(".gif"):
-        media_type = "image/gif"
-    elif filename.endswith(".webp"):
-        media_type = "image/webp"
-    else:
-        media_type = "image/jpeg"
-    return b64, media_type
+    return b64, "image/jpeg"
 
 
 def build_preferences_text(allergies: str, likes: str, dislikes: str, brands: str, country: str) -> str:
