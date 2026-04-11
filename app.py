@@ -156,8 +156,7 @@ def analyze():
     try:
         response = client.messages.create(
             model="claude-opus-4-6",
-            max_tokens=16000,
-            thinking={"type": "enabled", "budget_tokens": 10000},
+            max_tokens=4096,
             system=SYSTEM_PROMPT,
             messages=[
                 {
@@ -187,12 +186,7 @@ def analyze():
             ],
         )
 
-        # Extract text from response (skip thinking blocks)
-        result_text = ""
-        for block in response.content:
-            if block.type == "text":
-                result_text = block.text.strip()
-                break
+        result_text = response.content[0].text.strip()
 
         # Strip markdown code fences if present
         if result_text.startswith("```"):
