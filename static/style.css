@@ -447,6 +447,7 @@ details p {
 .country-wrap select:focus { border-color: var(--blue); }
 
 /* Selected country badge */
+.country-badge[hidden] { display: none !important; }
 .country-badge {
   display: inline-flex;
   align-items: center;
