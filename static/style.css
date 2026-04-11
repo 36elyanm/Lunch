@@ -155,6 +155,7 @@ main { flex: 1; max-width: 900px; margin: 0 auto; width: 100%; padding: 2rem 1.2
 }
 
 /* ===== Loading ===== */
+.loading-section[hidden] { display: none !important; }
 .loading-section {
   display: flex;
   align-items: center;
