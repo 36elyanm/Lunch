@@ -1,8 +1,8 @@
-run = "gunicorn app:app --bind 0.0.0.0:$PORT"
+run = "pip install -r requirements.txt && gunicorn app:app --bind 0.0.0.0:$PORT"
 
 [agent]
 expertMode = true
 
 [deployment]
-run = ["sh", "-c", "gunicorn app:app --bind 0.0.0.0:$PORT"]
+run = ["sh", "-c", "pip install -r requirements.txt && gunicorn app:app --bind 0.0.0.0:$PORT"]
 deploymentTarget = "autoscale"
