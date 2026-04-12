@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LunchBox AI — Smart Meal Planner</title>
+  <link rel="stylesheet" href="static/style.css" />
+</head>
+<body>
+
+  <header>
+    <div class="header-inner">
+      <div class="logo">🥗 LunchBox AI</div>
+      <p class="tagline">Snap your fridge &amp; lunchbox — AI builds your perfect balanced meal</p>
+    </div>
+  </header>
+
+  <main>
+
+    <!-- Upload Section -->
+    <section class="upload-section" id="uploadSection">
+      <form id="analyzeForm">
+
+        <!-- API Key Section -->
+        <div class="apikey-section" id="apikeySection">
+          <h3 class="prefs-title">🔑 Anthropic API Key <span class="optional-tag">required</span></h3>
+          <p class="location-desc">Your key is saved on your device only — never sent anywhere except directly to Anthropic.</p>
+          <div class="apikey-row">
+            <input type="password" id="apiKeyInput" placeholder="sk-ant-…" autocomplete="off" />
+            <button type="button" class="btn-save-key" onclick="saveApiKey()">Save</button>
+          </div>
+          <div id="apiKeyStatus" class="apikey-status"></div>
+        </div>
+
+        <div class="upload-grid">
+
+          <!-- Fridge Upload -->
+          <div class="upload-card" id="fridgeCard">
+            <input type="file" id="fridgeLibrary" accept="image/*" hidden />
+            <input type="file" id="fridgeCamera" accept="image/*" capture="environment" hidden />
+            <div class="upload-zone" id="fridgeZone">
+              <div class="upload-icon">🧊</div>
+              <div class="upload-label">Photo of your Fridge</div>
+              <div class="upload-actions">
+                <button type="button" class="pick-btn pick-library"
+                        onclick="document.getElementById('fridgeLibrary').click()">
+                  🖼️ Photo Library
+                </button>
+                <button type="button" class="pick-btn pick-camera"
+                        onclick="document.getElementById('fridgeCamera').click()">
+                  📷 Camera
+                </button>
+              </div>
+              <div class="upload-hint drag-hint">or drag &amp; drop an image here</div>
+            </div>
+            <div class="preview-wrap" id="fridgePreview" hidden>
+              <img id="fridgeImg" src="" alt="Fridge preview" />
+              <button type="button" class="remove-btn" onclick="removeImage('fridge')">✕ Remove</button>
+            </div>
+          </div>
+
+          <!-- Lunchbox Upload -->
+          <div class="upload-card" id="lunchboxCard">
+            <input type="file" id="lunchboxLibrary" accept="image/*" hidden />
+            <input type="file" id="lunchboxCamera" accept="image/*" capture="environment" hidden />
+            <div class="upload-zone" id="lunchboxZone">
+              <div class="upload-icon">🍱</div>
+              <div class="upload-label">Photo of your Lunchbox</div>
+              <div class="upload-actions">
+                <button type="button" class="pick-btn pick-library"
+                        onclick="document.getElementById('lunchboxLibrary').click()">
+                  🖼️ Photo Library
+                </button>
+                <button type="button" class="pick-btn pick-camera"
+                        onclick="document.getElementById('lunchboxCamera').click()">
+                  📷 Camera
+                </button>
+              </div>
+              <div class="upload-hint drag-hint">or drag &amp; drop an image here</div>
+            </div>
+            <div class="preview-wrap" id="lunchboxPreview" hidden>
+              <img id="lunchboxImg" src="" alt="Lunchbox preview" />
+              <button type="button" class="remove-btn" onclick="removeImage('lunchbox')">✕ Remove</button>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Location / Cuisine Section -->
+        <div class="location-section">
+          <h3 class="prefs-title">🌍 Cuisine Style <span class="optional-tag">optional</span></h3>
+          <p class="location-desc">Tell us where you are (or pick a country) and we'll suggest meals inspired by local ingredients and flavours.</p>
+          <div class="location-row">
+            <button type="button" class="btn-locate" id="locateBtn" onclick="detectLocation()">
+              <span id="locateIcon">📍</span>
+              <span id="locateText">Use my location</span>
+            </button>
+            <span class="location-or">or</span>
+            <div class="country-wrap">
+              <select id="countrySelect" name="country">
+                <option value="">— Choose a country —</option>
+                <optgroup label="Africa">
+                  <option value="Ethiopia">🇪🇹 Ethiopia</option>
+                  <option value="Ghana">🇬🇭 Ghana</option>
+                  <option value="Kenya">🇰🇪 Kenya</option>
+                  <option value="Morocco">🇲🇦 Morocco</option>
+                  <option value="Nigeria">🇳🇬 Nigeria</option>
+                  <option value="South Africa">🇿🇦 South Africa</option>
+                  <option value="Egypt">🇪🇬 Egypt</option>
+                  <option value="Tunisia">🇹🇳 Tunisia</option>
+                </optgroup>
+                <optgroup label="Americas">
+                  <option value="Argentina">🇦🇷 Argentina</option>
+                  <option value="Brazil">🇧🇷 Brazil</option>
+                  <option value="Canada">🇨🇦 Canada</option>
+                  <option value="Chile">🇨🇱 Chile</option>
+                  <option value="Colombia">🇨🇴 Colombia</option>
+                  <option value="Cuba">🇨🇺 Cuba</option>
+                  <option value="Mexico">🇲🇽 Mexico</option>
+                  <option value="Peru">🇵🇪 Peru</option>
+                  <option value="United States">🇺🇸 United States</option>
+                </optgroup>
+                <optgroup label="Asia">
+                  <option value="Bangladesh">🇧🇩 Bangladesh</option>
+                  <option value="China">🇨🇳 China</option>
+                  <option value="India">🇮🇳 India</option>
+                  <option value="Indonesia">🇮🇩 Indonesia</option>
+                  <option value="Iran">🇮🇷 Iran</option>
+                  <option value="Israel">🇮🇱 Israel</option>
+                  <option value="Japan">🇯🇵 Japan</option>
+                  <option value="Jordan">🇯🇴 Jordan</option>
+                  <option value="Lebanon">🇱🇧 Lebanon</option>
+                  <option value="Malaysia">🇲🇾 Malaysia</option>
+                  <option value="Pakistan">🇵🇰 Pakistan</option>
+                  <option value="Philippines">🇵🇭 Philippines</option>
+                  <option value="Saudi Arabia">🇸🇦 Saudi Arabia</option>
+                  <option value="Singapore">🇸🇬 Singapore</option>
+                  <option value="South Korea">🇰🇷 South Korea</option>
+                  <option value="Sri Lanka">🇱🇰 Sri Lanka</option>
+                  <option value="Taiwan">🇹🇼 Taiwan</option>
+                  <option value="Thailand">🇹🇭 Thailand</option>
+                  <option value="Turkey">🇹🇷 Turkey</option>
+                  <option value="Vietnam">🇻🇳 Vietnam</option>
+                </optgroup>
+                <optgroup label="Europe">
+                  <option value="France">🇫🇷 France</option>
+                  <option value="Germany">🇩🇪 Germany</option>
+                  <option value="Greece">🇬🇷 Greece</option>
+                  <option value="Italy">🇮🇹 Italy</option>
+                  <option value="Netherlands">🇳🇱 Netherlands</option>
+                  <option value="Poland">🇵🇱 Poland</option>
+                  <option value="Portugal">🇵🇹 Portugal</option>
+                  <option value="Russia">🇷🇺 Russia</option>
+                  <option value="Spain">🇪🇸 Spain</option>
+                  <option value="Sweden">🇸🇪 Sweden</option>
+                  <option value="United Kingdom">🇬🇧 United Kingdom</option>
+                </optgroup>
+                <optgroup label="Oceania">
+                  <option value="Australia">🇦🇺 Australia</option>
+                  <option value="New Zealand">🇳🇿 New Zealand</option>
+                </optgroup>
+              </select>
+            </div>
+          </div>
+          <div class="country-badge" id="countryBadge" hidden>
+            <span id="countryBadgeText"></span>
+            <button type="button" class="clear-country" onclick="clearCountry()" title="Remove">✕</button>
+          </div>
+        </div>
+
+        <!-- Preferences Section -->
+        <div class="prefs-section">
+          <h3 class="prefs-title">🙋 Your Preferences <span class="optional-tag">optional</span></h3>
+          <div class="prefs-grid">
+            <div class="pref-field pref-allergy">
+              <label for="allergies"><span class="pref-icon">⚠️</span> Allergies</label>
+              <input type="text" id="allergies" placeholder="e.g. peanuts, shellfish, gluten, dairy…" autocomplete="off" />
+              <span class="pref-hint">These will be strictly excluded from all meals</span>
+            </div>
+            <div class="pref-field pref-like">
+              <label for="likes"><span class="pref-icon">💚</span> Foods I like</label>
+              <input type="text" id="likes" placeholder="e.g. avocado, chicken, pasta, spicy food…" autocomplete="off" />
+              <span class="pref-hint">AI will prioritise these when possible</span>
+            </div>
+            <div class="pref-field pref-dislike">
+              <label for="dislikes"><span class="pref-icon">🚫</span> Foods I dislike</label>
+              <input type="text" id="dislikes" placeholder="e.g. onions, mushrooms, olives, fish…" autocomplete="off" />
+              <span class="pref-hint">These will be avoided in suggestions</span>
+            </div>
+          </div>
+          <div class="pref-field pref-brands" style="margin-top:.85rem;">
+            <label for="brands"><span class="pref-icon">🏷️</span> Brands in your fridge</label>
+            <input type="text" id="brands" placeholder="e.g. Heinz ketchup, Oatly oat milk, Hellmann's mayo…" autocomplete="off" />
+            <span class="pref-hint">Helps AI give more accurate nutritional info</span>
+          </div>
+        </div>
+
+        <div class="submit-area">
+          <button type="submit" class="btn-analyze" id="analyzeBtn" disabled>
+            <span class="btn-text">✨ Generate Meal Ideas</span>
+          </button>
+          <p class="privacy-note">🔒 Images are sent directly to Claude AI and never stored</p>
+        </div>
+
+      </form>
+    </section>
+
+    <!-- Loading State -->
+    <section class="loading-section" id="loadingSection" hidden>
+      <div class="loading-inner">
+        <div class="spinner"></div>
+        <h2>Analyzing your ingredients…</h2>
+        <p>Claude is checking your fridge, sizing your lunchbox, and planning balanced meals for you.</p>
+        <div class="loading-steps">
+          <div class="step" id="step1">🧊 Identifying fridge ingredients</div>
+          <div class="step" id="step2">🍱 Assessing lunchbox capacity</div>
+          <div class="step" id="step3">🥗 Crafting balanced meal plans</div>
+          <div class="step" id="step4">✅ Checking nutrition (protein · carbs · healthy fat)</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Results Section -->
+    <section class="results-section" id="resultsSection" hidden>
+      <div class="results-header">
+        <h2>Your Personalised Lunch Ideas</h2>
+        <button class="btn-reset" onclick="resetApp()">↩ Start over</button>
+      </div>
+      <div class="info-cards" id="infoCards"></div>
+      <div class="meals-grid" id="mealsGrid"></div>
+      <div class="tips-section" id="tipsSection" hidden>
+        <h3>💡 Nutrition Tips</h3>
+        <ul id="tipsList"></ul>
+      </div>
+    </section>
+
+    <!-- Error Banner -->
+    <div class="error-banner" id="errorBanner" hidden>
+      <span id="errorText"></span>
+      <button onclick="dismissError()">✕</button>
+    </div>
+
+  </main>
+
+  <footer>
+    <p>Powered by <strong>Claude Sonnet 4.6</strong> · All meals balanced with protein, carbs &amp; healthy fats · No trans fat</p>
+  </footer>
+
+  <script>
+    // ===== System Prompt =====
+    const SYSTEM_PROMPT = `You are a nutritionist and meal-prep expert. Your job is to:
+1. Identify all visible ingredients in the fridge photo
+2. Assess the lunchbox size and capacity from the lunchbox photo
+3. Generate practical, balanced lunch meal ideas using ONLY the available ingredients
+
+NUTRITION REQUIREMENTS (mandatory for every meal suggestion):
+- PROTEIN: Must include a clear protein source (meat, eggs, legumes, dairy, tofu, etc.)
+- CARBOHYDRATES: Must include a carb source (bread, rice, pasta, vegetables, fruit, etc.)
+- HEALTHY FAT: Must include healthy fat (olive oil, avocado, nuts, cheese, etc.)
+- NO TRANS FAT: Absolutely no partially hydrogenated oils, margarine, or processed foods containing trans fats
+
+PERSONAL PREFERENCES: You MUST strictly respect the user's stated allergies, dislikes, and preferences.
+- ALLERGIES are hard constraints — never include an allergen even as a trace ingredient
+- DISLIKES should be avoided entirely
+- LIKES should be prioritised where possible
+
+FORMAT your response as JSON with this exact structure:
+{
+  "fridge_ingredients": ["list", "of", "identified", "ingredients"],
+  "lunchbox_capacity": "description of lunchbox size",
+  "meals": [
+    {
+      "name": "Meal Name",
+      "description": "Brief appealing description",
+      "ingredients": ["ingredient 1", "ingredient 2"],
+      "assembly": "Simple step-by-step instructions",
+      "nutrition": {
+        "protein": "what provides protein and estimated amount",
+        "carbs": "what provides carbs and estimated amount",
+        "fat": "what provides healthy fat and estimated amount",
+        "calories": "estimated total calories"
+      },
+      "fits_lunchbox": true,
+      "prep_time": "X minutes"
+    }
+  ],
+  "tips": ["optional tip 1", "optional tip 2"]
+}
+
+Provide 3 meal suggestions. Return JSON only — no markdown, no explanation outside the JSON.`;
+
+    // ===== API Key =====
+    function saveApiKey() {
+      const val = document.getElementById('apiKeyInput').value.trim();
+      if (!val.startsWith('sk-ant-')) {
+        setKeyStatus('❌ Invalid key — must start with sk-ant-', false);
+        return;
+      }
+      localStorage.setItem('anthropicApiKey', val);
+      document.getElementById('apiKeyInput').value = '';
+      setKeyStatus('✅ Key saved', true);
+      updateBtn();
+    }
+
+    function setKeyStatus(msg, ok) {
+      const el = document.getElementById('apiKeyStatus');
+      el.textContent = msg;
+      el.className = 'apikey-status ' + (ok ? 'apikey-ok' : 'apikey-err');
+    }
+
+    // Show saved key status on load
+    window.addEventListener('DOMContentLoaded', () => {
+      const saved = localStorage.getItem('anthropicApiKey');
+      if (saved) setKeyStatus('✅ Key saved', true);
+    });
+
+    // ===== Image resize via Canvas =====
+    function resizeImage(file, maxSide = 1568, quality = 0.85) {
+      return new Promise((resolve, reject) => {
+        const img = new Image();
+        const url = URL.createObjectURL(file);
+        img.onload = () => {
+          let { width, height } = img;
+          if (width > maxSide || height > maxSide) {
+            if (width >= height) { height = Math.round(height * maxSide / width); width = maxSide; }
+            else { width = Math.round(width * maxSide / height); height = maxSide; }
+          }
+          const canvas = document.createElement('canvas');
+          canvas.width = width; canvas.height = height;
+          canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+          URL.revokeObjectURL(url);
+          canvas.toBlob(blob => {
+            const reader = new FileReader();
+            reader.onload = e => resolve(e.target.result.split(',')[1]);
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+          }, 'image/jpeg', quality);
+        };
+        img.onerror = reject;
+        img.src = url;
+      });
+    }
+
+    // ===== Preferences text =====
+    function buildPreferencesText(allergies, likes, dislikes, brands, country) {
+      const lines = [];
+      if (country.trim()) lines.push(
+        `CUISINE STYLE: I am from / eating in the style of ${country.trim()}. ` +
+        `Please draw inspiration from that country's traditional ingredients, spice profiles, ` +
+        `and typical lunch dishes.`
+      );
+      if (brands.trim()) lines.push(`BRANDS IN MY FRIDGE: ${brands.trim()}.`);
+      if (allergies.trim()) lines.push(`ALLERGIES (MUST avoid completely): ${allergies.trim()}`);
+      if (dislikes.trim()) lines.push(`DISLIKES (please avoid): ${dislikes.trim()}`);
+      if (likes.trim()) lines.push(`LIKES (prioritise if possible): ${likes.trim()}`);
+      return lines.length ? '\n\nMy personal preferences:\n' + lines.join('\n') : '';
+    }
+
+    // ===== File handling =====
+    const analyzeBtn = document.getElementById('analyzeBtn');
+    const chosen = { fridge: null, lunchbox: null };
+
+    [
+      ['fridgeLibrary',   'fridge'],
+      ['fridgeCamera',    'fridge'],
+      ['lunchboxLibrary', 'lunchbox'],
+      ['lunchboxCamera',  'lunchbox'],
+    ].forEach(([id, type]) => {
+      document.getElementById(id).addEventListener('change', e => {
+        if (e.target.files[0]) handleFile(type, e.target.files[0]);
+        e.target.value = '';
+      });
+    });
+
+    ['fridgeZone', 'lunchboxZone'].forEach(zoneId => {
+      const zone = document.getElementById(zoneId);
+      zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag-over'); });
+      zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
+      zone.addEventListener('drop', e => {
+        e.preventDefault(); zone.classList.remove('drag-over');
+        const file = e.dataTransfer.files[0];
+        if (file) handleFile(zoneId === 'fridgeZone' ? 'fridge' : 'lunchbox', file);
+      });
+    });
+
+    function handleFile(type, file) {
+      if (!file.type.startsWith('image/')) { showError('Please select an image file.'); return; }
+      const reader = new FileReader();
+      reader.onload = ev => {
+        document.getElementById(type === 'fridge' ? 'fridgeImg' : 'lunchboxImg').src = ev.target.result;
+        document.getElementById(type === 'fridge' ? 'fridgeZone' : 'lunchboxZone').hidden = true;
+        document.getElementById(type === 'fridge' ? 'fridgePreview' : 'lunchboxPreview').hidden = false;
+        chosen[type] = file;
+        updateBtn();
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function removeImage(type) {
+      chosen[type] = null;
+      document.getElementById(type === 'fridge' ? 'fridgeZone' : 'lunchboxZone').hidden = false;
+      document.getElementById(type === 'fridge' ? 'fridgePreview' : 'lunchboxPreview').hidden = true;
+      updateBtn();
+    }
+
+    function updateBtn() {
+      const hasKey = !!localStorage.getItem('anthropicApiKey');
+      analyzeBtn.disabled = !(chosen.fridge && chosen.lunchbox && hasKey);
+    }
+
+    // ===== Location =====
+    let detectedCountry = '';
+    const countrySelect = document.getElementById('countrySelect');
+    countrySelect.addEventListener('change', () => {
+      if (countrySelect.value) { detectedCountry = countrySelect.value; showCountryBadge(countrySelect.value, '🌍'); }
+      else clearCountry();
+    });
+
+    function detectLocation() {
+      if (!navigator.geolocation) { showError('Geolocation not supported. Choose a country manually.'); return; }
+      const btn = document.getElementById('locateBtn');
+      document.getElementById('locateIcon').textContent = '⏳';
+      document.getElementById('locateText').textContent = 'Detecting…';
+      btn.disabled = true;
+      navigator.geolocation.getCurrentPosition(async pos => {
+        try {
+          const { latitude, longitude } = pos.coords;
+          const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`, { headers: { 'Accept-Language': 'en' } });
+          const geo = await res.json();
+          const country = geo.address?.country || '';
+          if (country) { detectedCountry = country; countrySelect.value = ''; showCountryBadge(country, '📍'); }
+          else showError('Could not determine your country. Choose one manually.');
+        } catch { showError('Location lookup failed. Choose a country manually.'); }
+        finally { resetLocateBtn(); }
+      }, err => {
+        const msgs = { 1: 'Location permission denied.', 2: 'Location unavailable.', 3: 'Location timed out.' };
+        showError(msgs[err.code] || 'Could not get location.');
+        resetLocateBtn();
+      }, { timeout: 10000 });
+    }
+
+    function resetLocateBtn() {
+      document.getElementById('locateIcon').textContent = '📍';
+      document.getElementById('locateText').textContent = 'Use my location';
+      document.getElementById('locateBtn').disabled = false;
+    }
+
+    function showCountryBadge(country, icon) {
+      document.getElementById('countryBadgeText').textContent = `${icon} ${country}`;
+      document.getElementById('countryBadge').hidden = false;
+    }
+
+    function clearCountry() {
+      detectedCountry = '';
+      countrySelect.value = '';
+      document.getElementById('countryBadge').hidden = true;
+    }
+
+    // ===== Form submit — calls Claude API directly =====
+    document.getElementById('analyzeForm').addEventListener('submit', async e => {
+      e.preventDefault();
+      dismissError();
+
+      const apiKey = localStorage.getItem('anthropicApiKey');
+      if (!apiKey) { showError('Please save your Anthropic API key first.'); return; }
+
+      showLoading();
+      animateSteps();
+
+      try {
+        const [fridgeB64, lunchboxB64] = await Promise.all([
+          resizeImage(chosen.fridge),
+          resizeImage(chosen.lunchbox),
+        ]);
+
+        const country   = detectedCountry || countrySelect.value || '';
+        const allergies = document.getElementById('allergies').value;
+        const likes     = document.getElementById('likes').value;
+        const dislikes  = document.getElementById('dislikes').value;
+        const brands    = document.getElementById('brands').value;
+        const prefs     = buildPreferencesText(allergies, likes, dislikes, brands, country);
+
+        const userMessage =
+          'Please analyze both images and generate 3 balanced lunch meal ideas ' +
+          'that I can make with the ingredients in my fridge and that will fit ' +
+          'in my lunchbox. Each meal MUST include protein, carbohydrates, and ' +
+          'healthy fat (no trans fat).' + prefs + '\n\nReturn JSON only.';
+
+        const res = await fetch('https://api.anthropic.com/v1/messages', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': apiKey,
+            'anthropic-version': '2023-06-01',
+            'anthropic-dangerous-direct-browser-access': 'true',
+          },
+          body: JSON.stringify({
+            model: 'claude-sonnet-4-6',
+            max_tokens: 4096,
+            system: SYSTEM_PROMPT,
+            messages: [{
+              role: 'user',
+              content: [
+                { type: 'text', text: 'Here is a photo of my fridge:' },
+                { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: fridgeB64 } },
+                { type: 'text', text: 'And here is my lunchbox:' },
+                { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: lunchboxB64 } },
+                { type: 'text', text: userMessage },
+              ],
+            }],
+          }),
+        });
+
+        const json = await res.json();
+
+        if (!res.ok) {
+          const msg = json.error?.message || 'API error. Please try again.';
+          if (res.status === 401) showError('Invalid API key. Please check and re-save it.');
+          else if (res.status === 429) showError('Rate limit reached. Please wait and try again.');
+          else if (res.status === 402) showError('Insufficient credits. Add credits at console.anthropic.com.');
+          else showError(msg);
+          hideLoading(); return;
+        }
+
+        let resultText = json.content[0].text.trim();
+        if (resultText.startsWith('```')) {
+          const lines = resultText.split('\n');
+          resultText = lines.slice(1, lines[lines.length - 1].trim() === '```' ? -1 : lines.length).join('\n');
+        }
+
+        renderResults(JSON.parse(resultText));
+
+      } catch (err) {
+        showError('Something went wrong. Please check your connection and try again.');
+        hideLoading();
+      }
+    });
+
+    // ===== Loading =====
+    function animateSteps() {
+      ['step1','step2','step3','step4'].forEach((id, i) => {
+        setTimeout(() => document.getElementById(id).classList.add('active'), i * 1800);
+      });
+    }
+
+    function showLoading() {
+      document.getElementById('uploadSection').hidden = true;
+      document.getElementById('loadingSection').hidden = false;
+      document.getElementById('resultsSection').hidden = true;
+    }
+
+    function hideLoading() {
+      document.getElementById('uploadSection').hidden = false;
+      document.getElementById('loadingSection').hidden = true;
+      ['step1','step2','step3','step4'].forEach(id => document.getElementById(id).classList.remove('active'));
+    }
+
+    // ===== Results =====
+    function renderResults(data) {
+      document.getElementById('loadingSection').hidden = true;
+      document.getElementById('resultsSection').hidden = false;
+
+      const allergies = document.getElementById('allergies').value.trim();
+      const likes     = document.getElementById('likes').value.trim();
+      const dislikes  = document.getElementById('dislikes').value.trim();
+
+      let prefsHtml = '';
+      if (allergies || likes || dislikes) {
+        prefsHtml = `<div class="info-card info-card-prefs"><div class="info-icon">🙋</div><div class="info-body"><strong>Your Preferences Applied</strong>${allergies ? `<p><span class="pref-tag pref-tag-allergy">⚠️ Allergies</span> ${allergies}</p>` : ''}${likes ? `<p><span class="pref-tag pref-tag-like">💚 Likes</span> ${likes}</p>` : ''}${dislikes ? `<p><span class="pref-tag pref-tag-dislike">🚫 Dislikes</span> ${dislikes}</p>` : ''}</div></div>`;
+      }
+
+      const countryUsed = detectedCountry || countrySelect.value || '';
+      const countryHtml = countryUsed ? `<div class="info-card"><div class="info-icon">🌍</div><div class="info-body"><strong>Cuisine Style</strong><p>${countryUsed} — regional flavours applied</p></div></div>` : '';
+
+      document.getElementById('infoCards').innerHTML = `
+        <div class="info-card"><div class="info-icon">🧊</div><div class="info-body"><strong>Detected Ingredients</strong><p>${data.fridge_ingredients.join(', ')}</p></div></div>
+        <div class="info-card"><div class="info-icon">🍱</div><div class="info-body"><strong>Lunchbox Capacity</strong><p>${data.lunchbox_capacity}</p></div></div>
+        ${countryHtml}${prefsHtml}`;
+
+      document.getElementById('mealsGrid').innerHTML = data.meals.map((meal, i) => `
+        <div class="meal-card" style="animation-delay:${i * 0.15}s">
+          <div class="meal-number">${i + 1}</div>
+          <h3 class="meal-name">${meal.name}</h3>
+          <p class="meal-desc">${meal.description}</p>
+          <div class="meal-meta">
+            <span class="badge badge-time">⏱ ${meal.prep_time}</span>
+            <span class="badge badge-fit">${meal.fits_lunchbox ? '✅ Fits lunchbox' : '⚠️ May be tight'}</span>
+            <span class="badge badge-cal">🔥 ${meal.nutrition.calories}</span>
+          </div>
+          <div class="nutrition-grid">
+            <div class="nut-cell nut-protein"><div class="nut-icon">💪</div><div class="nut-label">Protein</div><div class="nut-val">${meal.nutrition.protein}</div></div>
+            <div class="nut-cell nut-carbs"><div class="nut-icon">🌾</div><div class="nut-label">Carbs</div><div class="nut-val">${meal.nutrition.carbs}</div></div>
+            <div class="nut-cell nut-fat"><div class="nut-icon">🥑</div><div class="nut-label">Healthy Fat</div><div class="nut-val">${meal.nutrition.fat}</div></div>
+          </div>
+          <details class="ingredients-detail">
+            <summary>🛒 Ingredients (${meal.ingredients.length})</summary>
+            <ul>${meal.ingredients.map(i => `<li>${i}</li>`).join('')}</ul>
+          </details>
+          <details class="assembly-detail">
+            <summary>📋 How to assemble</summary>
+            <p>${meal.assembly}</p>
+          </details>
+        </div>`).join('');
+
+      if (data.tips && data.tips.length) {
+        document.getElementById('tipsSection').hidden = false;
+        document.getElementById('tipsList').innerHTML = data.tips.map(t => `<li>${t}</li>`).join('');
+      }
+    }
+
+    function resetApp() {
+      document.getElementById('resultsSection').hidden = true;
+      document.getElementById('uploadSection').hidden = false;
+      removeImage('fridge');
+      removeImage('lunchbox');
+      document.getElementById('tipsSection').hidden = true;
+      ['step1','step2','step3','step4'].forEach(id => document.getElementById(id).classList.remove('active'));
+    }
+
+    function showError(msg) {
+      document.getElementById('errorText').textContent = msg;
+      document.getElementById('errorBanner').hidden = false;
+    }
+
+    function dismissError() {
+      document.getElementById('errorBanner').hidden = true;
+    }
+  </script>
+</body>
+</html>
